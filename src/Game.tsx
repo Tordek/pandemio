@@ -1,3 +1,4 @@
+import classNames from "classnames";
 import React, { useEffect, useState } from "react";
 import { MapContainer, TileLayer } from "react-leaflet";
 
@@ -27,7 +28,8 @@ const Game = () => {
 
   return (
     <>
-      {/* <MapContainer
+      <div className={style.container}>
+        {/* <MapContainer
         className={style.map}
         placeholder
         center={position}
@@ -37,31 +39,52 @@ const Game = () => {
         {/* attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' * /}
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
       </MapContainer> */}
-      <div>
-        {Object.entries(gameState).map(([name, value]) => (
-          <p key={name}>
-            {name}: {value}
-          </p>
-        ))}
+        <div className={style.features}>
+          {Object.entries(gameState)
+            .filter(([name]) => name !== "infected")
+            .map(([name, value]) => (
+              <p key={name}>
+                {name}: {formatNumber(value as number)}
+              </p>
+            ))}
+        </div>
+        <div className={style.chart}>
+          <ul>
+            {gameState.infected.map((n, i) => (
+              <li
+                key={i}
+                className={classNames({
+                  [style.dying]: gameState.lethality > i,
+                  [style.contagious]: gameState.contagionTime > i,
+                })}
+              >
+                {formatNumber(n)}
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
       <div>
-        {actions
-          .filter(({ visible }) => visible(gameState))
-          .map((action) => (
-            <div key={action.name}>
-              <button
-                disabled={gameState.currentViruses < action.cost(gameState)}
-                onClick={() =>
-                  setGameState(
-                    applyAction(action.cost(gameState), action.levelUp)
-                  )
-                }
-              >
-                {action.name} ({action.cost(gameState)})
-              </button>
-              { action.description }
-            </div>
-          ))}
+        <div className={style.actions}>
+          {actions
+            .filter(({ visible }) => visible(gameState))
+            .map((action) => (
+              <div key={action.name}>
+                <button
+                  disabled={!action.enabled(gameState) || (gameState.currentViruses < action.cost(gameState))}
+                  onClick={() =>
+                    setGameState(
+                      applyAction(action.cost(gameState), action.levelUp)
+                    )
+                  }
+                >
+                  {action.name} ({action.cost(gameState)})
+                </button>
+                {" "}
+                {action.description}
+              </div>
+            ))}
+        </div>
       </div>
     </>
   );

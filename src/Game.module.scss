@@ -2,3 +2,24 @@
   height: 200px;
   aspect-ratio: 2/1;
 }
+
+.contagious {
+  color: green;
+}
+
+.dying {
+  color: red;  
+}
+
+.container {
+  display: flex;
+  flex-direction: row;
+}
+
+.features {
+  flex: 1;
+}
+
+.chart {
+  flex: 1;
+}
