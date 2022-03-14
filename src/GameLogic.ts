@@ -18,7 +18,7 @@ type GameState = Record<Feature, number> & { infected: number[] };
 type Action = {
   name: string;
   visible: (gameState: GameState) => boolean;
-  enabled: (gameState: GameState) => boolean;
+  maxed: (gameState: GameState) => boolean;
   cost: (gameState: GameState) => number;
   levelUp: (g: GameState) => Partial<GameState>;
   description: string;
@@ -98,19 +98,20 @@ const actions: Action[] = [
     cost: () => 0,
     levelUp: breedVirus,
     visible: () => true,
-    enabled: () => true,
+    maxed: () => false,
   },
   {
     name: "Infect Human",
     cost: (gameState: GameState) =>
       Math.floor(
-        (100) * Math.pow(1.5, gameState.manualInfections - gameState.sanitation / 2)
+        100 *
+          Math.pow(1.5, gameState.manualInfections - gameState.sanitation / 2)
       ),
     description:
       "Jump to a human host. Humans incubate the disease and make more viruses. They might infect other humans.",
     levelUp: infectHuman,
     visible: ({ totalViruses }) => totalViruses > 50,
-    enabled: () => true,
+    maxed: () => false,
   },
   {
     name: "Lower sanitation",
@@ -118,7 +119,7 @@ const actions: Action[] = [
     description: "Easier to jump to human hosts.",
     levelUp: purchaseAction("sanitation"),
     visible: ({ totalViruses }) => totalViruses > 50,
-    enabled: () => true,
+    maxed: ({ sanitation }) => sanitation >= 30,
   },
   {
     name: "Adapt to human physiology",
@@ -126,32 +127,23 @@ const actions: Action[] = [
     description: "Humans create more viruses.",
     levelUp: purchaseAction("rateOfReplicaton"),
     visible: ({ totalViruses }) => totalViruses > 100,
-    enabled: () => true,
+    maxed: () => false,
   },
   {
     name: "Adapt to human immune system",
     cost: exponentialCost(200, 1.04, "rateOfInfection"),
-    description: "Humans infect each other faster.",
+    description: "Humans infect each other more easily.",
     levelUp: purchaseAction("rateOfInfection"),
     visible: ({ totalViruses }) => totalViruses > 100,
-    enabled: () => true,
+    maxed: () => false,
   },
   {
     name: "Weaken defenses",
     cost: exponentialCost(100, 10, "contagionTime"),
-    description: "Humans infect each other more often.",
+    description: "Humans infect each other earlier.",
     levelUp: purchaseAction("contagionTime"),
-    visible: ({ totalViruses, contagionTime }) => totalViruses > 100 && contagionTime < 30,
-    enabled: () => true,
-  },
-  {
-    name: "Lower incubation time",
-    cost: exponentialCost(200, 1.04, "incubationTime"),
-    description:
-      "Improved replication DNA. Time from infection to activation is lowered.",
-    levelUp: purchaseAction("incubationTime"),
-    visible: ({ totalViruses }) => totalViruses > 1000000,
-    enabled: () => true,
+    visible: ({ totalViruses }) => totalViruses > 100,
+    maxed: ({ contagionTime }) => contagionTime >= 30,
   },
   {
     name: "Invade systems",
@@ -159,24 +151,35 @@ const actions: Action[] = [
     description: "Kill them all.",
     levelUp: purchaseAction("lethality"),
     visible: ({ totalViruses }) => totalViruses > 50000,
-    enabled: () => true,
+    maxed: ({ lethality }) => lethality >= 1,
+  },
+  {
+    name: "Lower incubation time",
+    cost: exponentialCost(200, 1.04, "incubationTime"),
+    description:
+      "Improved replication DNA. Time from infection to activation is lowered.",
+    levelUp: purchaseAction("incubationTime"),
+    visible: ({ totalViruses, lethality }) =>
+      totalViruses > 1000000 && lethality > 0,
+    maxed: ({ incubationTime }) => incubationTime >= 10,
   },
 ];
 
 const initialGameState = (): GameState => ({
   currentViruses: 0,
   totalViruses: 0,
-  healthyHumans: 0,  
+  healthyHumans: 0,
   deadHumans: 0,
 
   manualInfections: 0,
   sanitation: 0,
-  rateOfInfection: 0,  
+  rateOfInfection: 0,
   incubationTime: 0,
   lethality: 0,
   contagionTime: 1,
   rateOfReplicaton: 0,
   infected: Array(30).fill(0),
+
   day: 0,
   time: 0,
 });
@@ -192,14 +195,15 @@ const tick = (immutableGameState: GameState): GameState => {
   // Replication (Infected human => virus)
   const totalInfected = gameState.infected.reduce((a, b) => a + b, 0);
   const transmittedViruses = totalInfected * gameState.rateOfReplicaton * 0.1;
-  gameState.currentViruses += transmittedViruses;
-  gameState.totalViruses += transmittedViruses;
 
-  // Contagion (Infected human => human)
+  // Contagion (Contagious human => human)
   const contagious = gameState.infected
     .slice(0, gameState.contagionTime)
     .reduce((a, b) => a + b, 0);
-  const newInfectedHumans = Math.min(gameState.healthyHumans, contagious * gameState.rateOfInfection * 0.01);
+  const newInfectedHumans = Math.min(
+    gameState.healthyHumans,
+    contagious * gameState.rateOfInfection * 0.01
+  );
 
   if (gameState.time <= 0) {
     gameState.time = 20; // ticks per second
@@ -217,9 +221,12 @@ const tick = (immutableGameState: GameState): GameState => {
     gameState.deadHumans += dead;
   }
 
-  gameState.infected[gameState.infected.length - 1] += newInfectedHumans;  
-  gameState.healthyHumans = 7000000000 - newInfectedHumans - gameState.deadHumans;
-  
+  gameState.currentViruses += transmittedViruses;
+  gameState.totalViruses += transmittedViruses;
+  gameState.infected[gameState.infected.length - 1] += newInfectedHumans;
+  gameState.healthyHumans =
+    gameState.healthyHumans - newInfectedHumans - gameState.deadHumans;
+
   return gameState;
 };
 

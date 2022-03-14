@@ -71,14 +71,14 @@ const Game = () => {
             .map((action) => (
               <div key={action.name}>
                 <button
-                  disabled={!action.enabled(gameState) || (gameState.currentViruses < action.cost(gameState))}
+                  disabled={action.maxed(gameState) || (gameState.currentViruses < action.cost(gameState))}
                   onClick={() =>
                     setGameState(
                       applyAction(action.cost(gameState), action.levelUp)
                     )
                   }
                 >
-                  {action.name} ({action.cost(gameState)})
+                  {action.name} ({action.maxed(gameState) ? "MAX" : action.cost(gameState)})
                 </button>
                 {" "}
                 {action.description}
