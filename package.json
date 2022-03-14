@@ -52,5 +52,6 @@
     "eslint": "^8.10.0",
     "eslint-plugin-react": "^7.29.3",
     "gh-pages": "^3.2.3"
-  }
+  },
+  "homepage": "https://tordek.github.io/pandemio"
 }
