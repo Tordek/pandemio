@@ -202,7 +202,7 @@ const tick = (immutableGameState: GameState): GameState => {
     // Contagion (Infected human => human)
     const sick = gameState.infected.shift() as number;
 
-    const contagious = gameState.infected.slice(0, 30 - gameState.contagionTime).reduce((a, b) => a + b, 0);
+    const contagious = gameState.infected.slice(0, gameState.contagionTime).reduce((a, b) => a + b, 0);
     const newInfectedHumans = contagious * gameState.rateOfInfection * 0.01;    
     gameState.infected.push(newInfectedHumans);
 
