@@ -4,6 +4,7 @@ type Feature =
   | "sanitation"
   | "healthyHumans"
   | "deadHumans"
+  | "totalHumans"
   | "manualInfections"
   | "rateOfInfection"
   | "contagionTime"
@@ -168,7 +169,8 @@ const actions: Action[] = [
 const initialGameState = (): GameState => ({
   currentViruses: 0,
   totalViruses: 0,
-  healthyHumans: 0,
+  totalHumans: 7000000000,
+  healthyHumans: 7000000000,
   deadHumans: 0,
 
   manualInfections: 0,
@@ -176,7 +178,7 @@ const initialGameState = (): GameState => ({
   rateOfInfection: 0,
   incubationTime: 0,
   lethality: 0,
-  contagionTime: 1,
+  contagionTime: 0,
   rateOfReplicaton: 0,
   infected: Array(30).fill(0),
 
@@ -184,28 +186,30 @@ const initialGameState = (): GameState => ({
   time: 0,
 });
 
-const tick = (immutableGameState: GameState): GameState => {
+const tick = (previousGameState: GameState): GameState => {
   const gameState = {
-    ...immutableGameState,
-    infected: [...immutableGameState.infected],
+    ...previousGameState,
+    infected: [...previousGameState.infected],
   };
 
-  gameState.time -= 1;
-
   // Replication (Infected human => virus)
-  const totalInfected = gameState.infected.reduce((a, b) => a + b, 0);
-  const transmittedViruses = totalInfected * gameState.rateOfReplicaton * 0.1;
+  const totalInfected = previousGameState.infected.reduce((a, b) => a + b, 0);
+  const transmittedViruses =
+    totalInfected * previousGameState.rateOfReplicaton * 0.1;
+  gameState.currentViruses += transmittedViruses;
+  gameState.totalViruses += transmittedViruses;
 
   // Contagion (Contagious human => human)
-  const contagious = gameState.infected
-    .slice(0, gameState.contagionTime)
+  const contagious = previousGameState.infected
+    .slice(0, previousGameState.contagionTime)
     .reduce((a, b) => a + b, 0);
   const newInfectedHumans = Math.min(
-    gameState.healthyHumans,
-    contagious * gameState.rateOfInfection * 0.01
+    previousGameState.healthyHumans,
+    contagious * previousGameState.rateOfInfection * 0.01
   );
+  gameState.infected[gameState.infected.length - 1] += newInfectedHumans;
 
-  if (gameState.time <= 0) {
+  if (previousGameState.time <= 0) {
     gameState.time = 20; // ticks per second
 
     gameState.day += 1;
@@ -215,17 +219,19 @@ const tick = (immutableGameState: GameState): GameState => {
     const sick = gameState.infected.shift() as number;
     gameState.infected.push(0);
 
-    const dead = Math.min(sick, sick * gameState.lethality * 0.05);
+    const dead = Math.min(sick, sick * previousGameState.lethality * 0.05);
 
     gameState.infected[0] += sick - dead;
     gameState.deadHumans += dead;
   }
+  gameState.time -= 1;
 
-  gameState.currentViruses += transmittedViruses;
-  gameState.totalViruses += transmittedViruses;
-  gameState.infected[gameState.infected.length - 1] += newInfectedHumans;
-  gameState.healthyHumans =
-    gameState.healthyHumans - newInfectedHumans - gameState.deadHumans;
+  gameState.healthyHumans = Math.max(
+    0,
+    previousGameState.totalHumans -
+      gameState.infected.reduce((a, b) => a + b, 0) -
+      gameState.deadHumans
+  );
 
   return gameState;
 };
