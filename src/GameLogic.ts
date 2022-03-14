@@ -211,17 +211,15 @@ const tick = (immutableGameState: GameState): GameState => {
     const sick = gameState.infected.shift() as number;
     gameState.infected.push(0);
 
-    const dead = sick * gameState.lethality;
+    const dead = Math.min(sick, sick * gameState.lethality * 0.05);
 
     gameState.infected[0] += sick - dead;
     gameState.deadHumans += dead;
   }
 
-  gameState.infected[gameState.infected.length - 1] += newInfectedHumans;
+  gameState.infected[gameState.infected.length - 1] += newInfectedHumans;  
+  gameState.healthyHumans = 7000000000 - newInfectedHumans - gameState.deadHumans;
   
-  const unhealthyHumans = gameState.infected.reduce((a, b) => a + b, 0) + gameState.deadHumans;
-  gameState.healthyHumans = 7000000000 - unhealthyHumans;
-
   return gameState;
 };
 
