@@ -12,7 +12,8 @@ type Feature =
   | "incubationTime"
   | "lethality"
   | "day"
-  | "time";
+  | "time"
+  | "fractionalInfected";
 
 type GameState = Record<Feature, number> & { infected: number[] };
 
@@ -47,7 +48,7 @@ const applyAction = (
 };
 
 const formatNumber = (number_: number): string => {
-  const number = Math.floor(number_);
+  const number = number_;
 
   if (number < 10000) {
     return `${number}`;
@@ -181,6 +182,7 @@ const initialGameState = (): GameState => ({
   contagionTime: 0,
   rateOfReplicaton: 0,
   infected: Array(30).fill(0),
+  fractionalInfected: 0,
 
   day: 0,
   time: 0,
@@ -207,7 +209,10 @@ const tick = (previousGameState: GameState): GameState => {
     previousGameState.healthyHumans,
     contagious * previousGameState.rateOfInfection * 0.01
   );
-  gameState.infected[gameState.infected.length - 1] += newInfectedHumans;
+  gameState.fractionalInfected = previousGameState.fractionalInfected + newInfectedHumans;
+  const integerInfectedHumans = Math.floor(gameState.fractionalInfected);
+  gameState.fractionalInfected -= integerInfectedHumans;
+  gameState.infected[gameState.infected.length - 1] += integerInfectedHumans;
 
   if (previousGameState.time <= 0) {
     gameState.time = 20; // ticks per second
